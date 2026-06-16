@@ -1,19 +1,15 @@
 -- ==========================================
 -- BẢN QUYỀN THUỘC VỀ NGÔ NGỌC HÙNG
+-- ĐIỀU KHIỂN 100% BẰNG KHUNG CHÁT - CHỐNG LỖI MÀN HÌNH
 -- ==========================================
 
-local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
 
--- Hàm hiển thị thông báo hệ thống nhanh
-local function showNotification(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = duration or 5
-    })
-end
+-- Biến cấu hình hệ thống
+local isVerified = false
+local autoFarmActive = false
 
 -- Hàm lấy mã khóa từ server Jsonbin.io của bạn
 local function getServerKey()
@@ -31,210 +27,127 @@ local function getServerKey()
     return nil
 end
 
--- Xóa giao diện cũ nếu tồn tại trước đó để tránh trùng lặp
-if CoreGui:FindFirstChild("HungHub_System") then CoreGui.HungHub_System:Destroy() end
-
--- Khởi tạo Giao diện hệ thống
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "HungHub_System"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
-
-------------------------------------------------------------------------
--- KHUNG 1: KHỦNG NHẬP KEY BAN ĐẦU
-------------------------------------------------------------------------
-local KeyFrame = Instance.new("Frame")
-KeyFrame.Size = UDim2.new(0, 300, 0, 160)
-KeyFrame.Position = UDim2.new(0.5, -150, 0.4, -80)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-KeyFrame.BorderSizePixel = 2
-KeyFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
-KeyFrame.Active = true
-KeyFrame.Draggable = true
-KeyFrame.Parent = ScreenGui
-
-local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, 0, 0, 40)
-KeyTitle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-KeyTitle.Text = "XÁC THỰC SERVER KEY"
-KeyTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-KeyTitle.TextSize = 14
-KeyTitle.TextFont = Enum.Font.SourceSansBold
-KeyTitle.Parent = KeyFrame
-
-local TextBox = Instance.new("TextBox")
-TextBox.Size = UDim2.new(0, 240, 0, 35)
-TextBox.Position = UDim2.new(0.5, -120, 0.45, -17)
-TextBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-TextBox.Text = ""
-TextBox.PlaceholderText = "Đang kiểm tra kết nối máy chủ..."
-TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextBox.TextSize = 14
-TextBox.Parent = KeyFrame
-
-local SubmitButton = Instance.new("TextButton")
-SubmitButton.Size = UDim2.new(0, 140, 0, 35)
-SubmitButton.Position = UDim2.new(0.5, -70, 0.8, -17)
-SubmitButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-SubmitButton.Text = "Xác Thực Key"
-SubmitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitButton.TextSize = 14
-SubmitButton.TextFont = Enum.Font.SourceSansBold
-SubmitButton.Parent = KeyFrame
-
-local currentServerKey = getServerKey()
-if currentServerKey then
-    TextBox.PlaceholderText = "Nhập mã tạo từ Web..."
-else
-    TextBox.PlaceholderText = "Lỗi kết nối API Server Key!"
+-- Hàm giả lập thông báo hệ thống bằng cách chát riêng (chỉ mình bạn thấy)
+local function sendSystemMessage(text)
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local chatEvents = replicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+    if chatEvents and chatEvents:FindFirstChild("OnMessageDoneFiltering") then
+        -- Cách hiển thị thông báo an toàn trong khung chat
+        print("[HỆ THỐNG]: " .. text)
+    end
+    -- Hiển thị thông báo góc màn hình nếu Executor hỗ trợ
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "NGÔ NGỌC HÙNG HUB",
+            Text = text,
+            Duration = 5
+        })
+    end)
 end
 
-------------------------------------------------------------------------
--- XỬ LÝ KHI NHẬP KEY ĐÚNG -> TỰ ĐỘNG VẼ MENU HACK GỐC
-------------------------------------------------------------------------
-SubmitButton.MouseButton1Click:Connect(function()
-    currentServerKey = getServerKey()
-    local userEnteredKey = string.gsub(TextBox.Text, "%s+", "")
+sendSystemMessage("Hệ thống đã nạp! Hãy chát: /e key [MãKey] để kích hoạt.")
+
+-- Lắng nghe người chơi chát lệnh
+LocalPlayer.Chatted:Connect(function(message)
+    local args = string.split(message, " ")
     
-    if userEnteredKey == currentServerKey and currentServerKey ~= nil then
-        KeyFrame:Destroy() -- Xóa khung nhập key đi
-        showNotification("Thành Công", "Mã khóa chính xác! Đang mở menu...", 3)
+    ------------------------------------------------------------------------
+    -- 1. LỆNH NHẬP KEY: /e key [Mã_Key_Của_Bạn]
+    ------------------------------------------------------------------------
+    if args[1] == "/e" and args[2] == "key" then
+        if isVerified then
+            sendSystemMessage("Bạn đã xác thực thành công trước đó rồi!")
+            return
+        end
         
-        -- Tạo Khung Menu Hack Chính (Vẽ bằng Code Gốc, Không Sợ Trắng/Đen)
-        local MainMenu = Instance.new("Frame")
-        MainMenu.Size = UDim2.new(0, 240, 0, 230)
-        MainMenu.Position = UDim2.new(0.5, -120, 0.35, -115)
-        MainMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-        MainMenu.BorderSizePixel = 2
-        MainMenu.BorderColor3 = Color3.fromRGB(255, 215, 0)
-        MainMenu.Active = true
-        MainMenu.Draggable = true
-        MainMenu.Parent = ScreenGui
-
-        local MenuTitle = Instance.new("TextLabel")
-        MenuTitle.Size = UDim2.new(1, 0, 0, 40)
-        MenuTitle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        MenuTitle.Text = "Ngô Ngọc Hùng Hub"
-        MenuTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-        MenuTitle.TextSize = 16
-        MenuTitle.TextFont = Enum.Font.SourceSansBold
-        MenuTitle.Parent = MainMenu
-
-        -- NÚT CHỨC NĂNG 1: AUTO FARM
-        local FarmButton = Instance.new("TextButton")
-        FarmButton.Size = UDim2.new(0.9, 0, 0, 35)
-        FarmButton.Position = UDim2.new(0.05, 0, 0, 55)
-        FarmButton.BackgroundColor3 = Color3.fromRGB(0, 102, 204)
-        FarmButton.Text = "Auto Farm: ĐANG TẮT"
-        FarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        FarmButton.TextSize = 14
-        FarmButton.TextFont = Enum.Font.SourceSansBold
-        FarmButton.Parent = MainMenu
-
-        local _G = getgenv and getgenv() or _G
-        _G.AutoFarm = false
-
-        FarmButton.MouseButton1Click:Connect(function()
-            _G.AutoFarm = not _G.AutoFarm
-            if _G.AutoFarm then
-                FarmButton.Text = "Auto Farm: ĐANG BẬT"
-                FarmButton.BackgroundColor3 = Color3.fromRGB(204, 0, 0)
+        local inputKey = args[3]
+        if not inputKey then
+            sendSystemMessage("Vui lòng nhập kèm mã key. Ví dụ: /e key HUNG_123")
+            return
+        end
+        
+        sendSystemMessage("Đang kiểm tra Key với server đám mây...")
+        local currentServerKey = getServerKey()
+        
+        if currentServerKey and inputKey == currentServerKey then
+            isVerified = true
+            sendSystemMessage("✅ XÁC THỰC THÀNH CÔNG! Dùng các lệnh sau để hack:")
+            sendSystemMessage("- Chát: /e farm (Để Bật/Tắt Auto Farm)")
+            sendSystemMessage("- Chát: /e speed (Để Bật/Tắt Tốc Độ Cao)")
+            sendSystemMessage("- Chát: /e jump (Để Bật/Tắt Nhảy Cao)")
+        else
+            sendSystemMessage("❌ Sai Key hoặc Key đã hết hạn! Hãy kiểm tra lại trên Web.")
+        end
+    end
+    
+    ------------------------------------------------------------------------
+    -- 2. CÁC LỆNH CHỨC NĂNG HACK (Chỉ chạy khi đã nhập đúng Key)
+    ------------------------------------------------------------------------
+    if isVerified then
+        -- LỆNH BẬT/TẮT AUTO FARM
+        if message == "/e farm" then
+            autoFarmActive = not autoFarmActive
+            if autoFarmActive then
+                sendSystemMessage("🌾 BẬT Auto Farm Gom Quái!")
             else
-                FarmButton.Text = "Auto Farm: ĐANG TẮT"
-                FarmButton.BackgroundColor3 = Color3.fromRGB(0, 102, 204)
+                sendSystemMessage("🛑 TẮT Auto Farm!")
             end
-        end)
-
-        -- Vòng lặp Gom quái và Tự đánh
-        task.spawn(function()
-            while task.wait() do
-                if _G.AutoFarm then
-                    pcall(function()
-                        local player = game.Players.LocalPlayer
-                        for _, v in pairs(game.Workspace.Enemies:GetChildren()) do
-                            if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                                v.HumanoidRootPart.CanCollide = false
-                                v.HumanoidRootPart.Size = Vector3.new(45, 45, 45)
-                                repeat
-                                    task.wait()
-                                    player.Character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0)
-                                    local tool = player.Character:FindFirstChildOfClass("Tool")
-                                    if tool then tool:Activate() end
-                                until not _G.AutoFarm or not v.Parent or v.Humanoid.Health <= 0
-                            end
-                        end
-                    end)
+        end
+        
+        -- LỆNH BẬT/TẮT TỐC ĐỘ
+        if message == "/e speed" then
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                if humanoid.WalkSpeed == 16 then
+                    humanoid.WalkSpeed = 90
+                    sendSystemMessage("⚡ BẬT Tốc độ siêu nhanh (Speed 90)")
+                else
+                    humanoid.WalkSpeed = 16
+                    sendSystemMessage("🚶 TẮT Tốc độ (Trở về bình thường)")
                 end
             end
-        end)
-
-        -- NÚT CHỨC NĂNG 2: TỐC ĐỘ CHẠY (SPEED)
-        local SpeedButton = Instance.new("TextButton")
-        SpeedButton.Size = UDim2.new(0.9, 0, 0, 35)
-        SpeedButton.Position = UDim2.new(0.05, 0, 0, 100)
-        SpeedButton.BackgroundColor3 = Color3.fromRGB(0, 128, 0)
-        SpeedButton.Text = "Tốc Độ: Bình Thường"
-        SpeedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        SpeedButton.TextSize = 14
-        SpeedButton.Parent = MainMenu
-
-        local speedToggle = false
-        SpeedButton.MouseButton1Click:Connect(function()
-            speedToggle = not speedToggle
-            if speedToggle then
-                game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 90
-                SpeedButton.Text = "Tốc Độ: Siêu Nhanh"
-                SpeedButton.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
-            else
-                game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16
-                SpeedButton.Text = "Tốc Độ: Bình Thường"
-                SpeedButton.BackgroundColor3 = Color3.fromRGB(0, 128, 0)
-            end
-        end)
-
-        -- NÚT CHỨC NĂNG 3: NHẢY CAO (JUMP)
-        local JumpButton = Instance.new("TextButton")
-        JumpButton.Size = UDim2.new(0.9, 0, 0, 35)
-        JumpButton.Position = UDim2.new(0.05, 0, 0, 145)
-        JumpButton.BackgroundColor3 = Color3.fromRGB(0, 128, 0)
-        JumpButton.Text = "Nhảy Cao: Bình Thường"
-        JumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        JumpButton.TextSize = 14
-        JumpButton.Parent = MainMenu
-
-        local jumpToggle = false
-        JumpButton.MouseButton1Click:Connect(function()
-            jumpToggle = not jumpToggle
-            if jumpToggle then
-                game.Players.LocalPlayer.Character.Humanoid.JumpPower = 150
-                JumpButton.Text = "Nhảy Cao: Siêu Cao"
-                JumpButton.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
-            else
-                game.Players.LocalPlayer.Character.Humanoid.JumpPower = 50
-                JumpButton.Text = "Nhảy Cao: Bình Thường"
-                JumpButton.BackgroundColor3 = Color3.fromRGB(0, 128, 0)
-            end
-        end)
-
-        -- NÚT ĐÓNG/ẨN MENU TẠM THỜI
-        local CloseButton = Instance.new("TextButton")
-        CloseButton.Size = UDim2.new(0.9, 0, 0, 30)
-        CloseButton.Position = UDim2.new(0.05, 0, 0, 190)
-        CloseButton.BackgroundColor3 = Color3.fromRGB(64, 64, 64)
-        CloseButton.Text = "Ẩn/Hiện Bảng Chức Năng"
-        CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        CloseButton.TextSize = 13
-        CloseButton.Parent = MainMenu
-
-        CloseButton.MouseButton1Click:Connect(function()
-            MainMenu.Visible = not MainMenu.Visible
-            showNotification("Hệ thống", "Đã thay đổi trạng thái hiển thị của Menu!", 2)
-        end)
+        end
         
+        -- LỆNH BẬT/TẮT NHẢY CAO
+        if message == "/e jump" then
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                if humanoid.JumpPower == 50 then
+                    humanoid.JumpPower = 150
+                    sendSystemMessage("🦘 BẬT Nhảy cao (Jump 150)")
+                else
+                    humanoid.JumpPower = 50
+                    sendSystemMessage("🛑 TẮT Nhảy cao (Trở về bình thường)")
+                end
+            end
+        end
     else
-        showNotification("Từ Chối Truy Cập", "Mã khóa không hợp lệ hoặc đã bị thay đổi trên Web.", 5)
-        TextBox.Text = ""
+        -- Nếu chưa nhập key mà đòi sài lệnh
+        if message == "/e farm" or message == "/e speed" or message == "/e jump" then
+            sendSystemMessage("⛔ Cảnh báo: Bạn phải nhập đúng Key trước đã!")
+        end
     end
 end)
 
-showNotification("Thông Tin", "Bản quyền thuộc về Ngô Ngọc Hùng", 5)
+-- Vòng lặp Auto Farm chạy ngầm (Chỉ hoạt động khi autoFarmActive = true)
+task.spawn(function()
+    while task.wait() do
+        if isVerified and autoFarmActive then
+            pcall(function()
+                for _, v in pairs(game.Workspace.Enemies:GetChildren()) do
+                    if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        v.HumanoidRootPart.CanCollide = false
+                        v.HumanoidRootPart.Size = Vector3.new(45, 45, 45)
+                        
+                        repeat
+                            task.wait()
+                            LocalPlayer.Character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0)
+                            local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                            if tool then tool:Activate() end
+                        until not autoFarmActive or not v.Parent or v.Humanoid.Health <= 0
+                    end
+                end
+            end)
+        end
+    end
+end)
