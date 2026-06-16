@@ -18,7 +18,6 @@ end
 -- Hàm lấy mã khóa từ server Jsonbin.io của bạn
 local function getServerKey()
     local success, result = pcall(function()
-        -- Truy vấn trực tiếp đến Bin ID đã cấu hình trên hệ thống của bạn
         return game:HttpGet("https://api.jsonbin.io/v3/b/6a104353ee5a733b12ffcdf5/latest?meta=false")
     end)
     if success then
@@ -32,12 +31,11 @@ local function getServerKey()
     return nil
 end
 
--- Xóa giao diện cũ nếu tồn tại trước đó để tránh xung đột
-if CoreGui:FindFirstChild("HungScript_System") then
-    CoreGui.HungScript_System:Destroy()
-end
+-- Xóa giao diện cũ nếu tồn tại trước đó để tránh trùng lặp
+if CoreGui:FindFirstChild("HungScript_System") then CoreGui.HungScript_System:Destroy() end
+if CoreGui:FindFirstChild("Orion") then CoreGui.Orion:Destroy() end
 
--- Khởi tạo Giao diện xác thực
+-- Khởi tạo Giao diện xác thực Key ban đầu
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HungScript_System"
 ScreenGui.Parent = CoreGui
@@ -82,56 +80,102 @@ SubmitButton.TextSize = 14
 SubmitButton.TextFont = Enum.Font.SourceSansBold
 SubmitButton.Parent = KeyFrame
 
--- Kiểm tra trạng thái kết nối ban đầu
 local currentServerKey = getServerKey()
 if currentServerKey then
-    TextBox.PlaceholderText = "Nhập Server Key được cấp..."
+    TextBox.PlaceholderText = "Nhập Server Key từ Web..."
 else
     TextBox.PlaceholderText = "Lỗi kết nối API Server Key!"
 end
 
--- Xử lý sự kiện xác thực khi người dùng nhấn nút
+-- Khi người dùng bấm nút Xác Thực thành công, hệ thống sẽ tự vẽ Menu Hack xịn luôn
 SubmitButton.MouseButton1Click:Connect(function()
-    -- Tải lại mã khóa mới nhất từ server để đảm bảo tính cập nhật thời gian thực
     currentServerKey = getServerKey()
     local userEnteredKey = string.gsub(TextBox.Text, "%s+", "")
     
     if not currentServerKey then
         showNotification("Lỗi Hệ Thống", "Không thể truy xuất dữ liệu xác thực từ máy chủ.", 5)
     elseif userEnteredKey == currentServerKey then
-        KeyFrame:Destroy()
-        showNotification("Thành Công", "Mã khóa chính xác! Đang khởi chạy hệ thống...", 5)
+        KeyFrame:Destroy() -- Xóa bảng nhập Key
+        showNotification("Thành Công", "Mã khóa chính xác! Đang khởi chạy Menu...", 5)
         
-        -- Thực thi mã nguồn đích trong một tiến trình độc lập để tối ưu hiệu năng
+        ------------------------------------------------------------------------
+        -- KHỞI CHẠY MENU HACK CHÍNH (TỰ CHỦ KHÔNG PHỤ THUỘC LINK NGOÀI)
+        ------------------------------------------------------------------------
+        local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+        local Window = OrionLib:MakeWindow({
+            Name = "Ngô Ngọc Hùng Hub (Blox Fruits)", 
+            HidePremium = false, 
+            SaveConfig = true, 
+            ConfigFolder = "HungHubConfig"
+        })
+
+        -- TAB 1: TỰ ĐỘNG ĐÁNH (AUTO FARM)
+        local Tab1 = Window:MakeTab({ Name = "Auto Farm", Icon = "rbxassetid://4483345998", PremiumOnly = false })
+        Tab1:AddLabel("Bản quyền độc quyền: Ngô Ngọc Hùng")
+
+        local _G = getgenv and getgenv() or _G
+        _G.AutoFarm = false
+
+        Tab1:AddToggle({
+            Name = "Bật Auto Farm (Gom Quái + Tự Đánh)",
+            Default = false,
+            Callback = function(Value)
+                _G.AutoFarm = Value
+            end    
+        })
+
+        -- Vòng lặp tối ưu chạy Auto Farm siêu mượt, tự động nhận diện vũ khí trên tay
         task.spawn(function()
-            local runSuccess, runError = pcall(function()
-                return loadstring(game:HttpGet("https://raw.githubusercontent.com/AnDepZaiHub/AnDepZaiHubBeta/refs/heads/main/AnDepZaiHubBeta.lua"))()
-            end)
-            if not runSuccess then
-                showNotification("Lỗi Tải Bản Vá", "Không thể nạp dữ liệu từ máy chủ phân phối gốc.", 5)
+            while task.wait() do
+                if _G.AutoFarm then
+                    pcall(function()
+                        local player = game.Players.LocalPlayer
+                        for _, v in pairs(game.Workspace.Enemies:GetChildren()) do
+                            if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                                -- Tự động gom quái tụ lại một điểm nhỏ chống lag
+                                v.HumanoidRootPart.CanCollide = false
+                                v.HumanoidRootPart.Size = Vector3.new(45, 45, 45)
+                                
+                                repeat
+                                    task.wait()
+                                    -- Teleport giữ khoảng cách an toàn phía trên đầu quái
+                                    player.Character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0)
+                                    
+                                    -- Tự động vung kiếm hoặc đấm quái liên tục
+                                    local tool = player.Character:FindFirstChildOfClass("Tool")
+                                    if tool then tool:Activate() end
+                                until not _G.AutoFarm or not v.Parent or v.Humanoid.Health <= 0
+                            end
+                        end
+                    end)
+                end
             end
         end)
-        
-        -- Khởi tạo nút tương tác nhanh (Ẩn/Hiện) có cấu trúc cố định chống lỗi giao diện
-        local InteractionButton = Instance.new("TextButton")
-        InteractionButton.Size = UDim2.new(0, 130, 0, 40)
-        InteractionButton.Position = UDim2.new(0.5, -65, 0.02, 0)
-        InteractionButton.Text = "Ẩn/Hiện Bảng"
-        InteractionButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-        InteractionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        InteractionButton.TextSize = 14
-        InteractionButton.TextFont = Enum.Font.SourceSansBold
-        InteractionButton.Parent = ScreenGui
-        
-        InteractionButton.MouseButton1Click:Connect(function()
-            -- Ghi nhận lệnh tương tác hệ thống
-            print("Yêu cầu thay đổi trạng thái hiển thị giao diện đã được thực thi.")
-        end)
+
+        -- TAB 2: TIỆN ÍCH NGƯỜI CHƠI
+        local Tab2 = Window:MakeTab({ Name = "Người Chơi", Icon = "rbxassetid://4483345998", PremiumOnly = false })
+
+        Tab2:AddToggle({
+            Name = "Bật Tốc Độ Nhanh (Speed 90)",
+            Default = false,
+            Callback = function(Value)
+                if Value then game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 90 else game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16 end
+            end    
+        })
+
+        Tab2:AddToggle({
+            Name = "Bật Nhảy Cao (Jump 150)",
+            Default = false,
+            Callback = function(Value)
+                if Value then game.Players.LocalPlayer.Character.Humanoid.JumpPower = 150 else game.Players.LocalPlayer.Character.Humanoid.JumpPower = 50 end
+            end    
+        })
+
+        OrionLib:Init()
     else
-        showNotification("Từ Chối Truy Cập", "Mã khóa không hợp lệ hoặc đã bị thay đổi.", 5)
+        showNotification("Từ Chối Truy Cập", "Mã khóa không hợp lệ hoặc đã bị thay đổi trên Web.", 5)
         TextBox.Text = ""
     end
 end)
 
--- Thông báo bản quyền ban đầu
 showNotification("Thông Tin", "Bản quyền thuộc về Ngô Ngọc Hùng", 10)
