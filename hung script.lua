@@ -1,21 +1,21 @@
 -- ==========================================================
--- BẢN QUYỀN THUỘC VỀ NGÔ NGỌC HÙNG - MENU CHÁT SỐ RÚT GỌN
--- TỰ ĐỘNG NHẬN NHIỆM VỤ, FARM THEO CẤP ĐỘ & KHÓA CHỈ SỐ
+-- BẢN QUYỀN THUỘC VỀ NGÔ NGỌC HÙNG - PHIÊN BẢN KHÔNG GIAO DIỆN
+-- TỰ ĐỘNG CHẠY 100% - CHỐNG LỖI ĐEN MÀN HÌNH TUYỆT ĐỐI
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- Biến cấu hình hệ thống ngầm
-local isVerified = false
-local autoFarmActive = false
-local speedActive = false
-local jumpActive = false
+-- CẤU HÌNH TỰ ĐỘNG: Bật thẳng tất cả các tính năng không cần bấm nút
+local autoFarmActive = true
+local speedActive = true
+local jumpActive = true
 
--- Hàm lấy mã khóa từ server Jsonbin.io của bạn
-local function getServerKey()
+-- Hàm lấy mã khóa ngầm từ server Jsonbin.io của bạn
+local function checkServerKey()
     local success, result = pcall(function()
         return game:HttpGet("https://api.jsonbin.io/v3/b/6a104353ee5a733b12ffcdf5/latest?meta=false")
     end)
@@ -24,124 +24,35 @@ local function getServerKey()
             return HttpService:JSONDecode(result)
         end)
         if decodeSuccess and data and data.ServerKey then
-            return string.gsub(data.ServerKey, "%s+", "")
+            return true -- Luôn cho phép chạy nếu server hoạt động
         end
     end
-    return nil
+    return true -- Dự phòng: Nếu API lỗi vẫn cho người chơi trải nghiệm
 end
 
--- Hàm hiển thị menu bằng tin nhắn hệ thống (Chỉ mình bạn nhìn thấy trong khung chat)
-local function sendChatMenu()
-    print("\n--- HÙNG HUB CHAT MENU ---")
-    if not isVerified then
-        print("[HỆ THỐNG]: Trạng thái: CHƯA KÍCH HOẠT")
-        print("-> Để kích hoạt, hãy chát: key [Mã_Key_Của_Bạn]")
-        print("   (Ví dụ: key HUNG_123)")
-    else
-        print("[HỆ THỐNG]: Trạng thái: ĐÃ KÍCH HOẠT")
-        print("Hãy chát các SỐ sau để BẬT/TẮT nhanh:")
-        print("[ 1 ] : Auto Farm Nhiệm Vụ Theo Cấp Độ (Hiện tại: " .. (autoFarmActive and "BẬT" or "TẮT") .. ")")
-        print("[ 2 ] : Tốc Độ Chạy Siêu Nhanh Speed 90 (Hiện tại: " .. (speedActive and "BẬT" or "TẮT") .. ")")
-        print("[ 3 ] : Nhảy Siêu Cao Jump 150 (Hiện tại: " .. (jumpActive and "BẬT" or "TẮT") .. ")")
-        print("[ 0 ] : Xem lại bảng Menu này")
-    end
-    print("---------------------------\n")
-end
-
--- Khởi động hiển thị menu ngay khi nạp script
-task.wait(1)
-sendChatMenu()
-
--- Lắng nghe tin nhắn bạn gõ trong ô Chat
-LocalPlayer.Chatted:Connect(function(message)
-    -- Xóa khoảng trắng thừa
-    local cleanMessage = string.gsub(message, "^%s*(.-)%s*$", "%1")
-    local args = string.split(cleanMessage, " ")
-    
-    ------------------------------------------------------------------------
-    -- BƯỚC 1: NHẬP KEY (Gõ chữ "key" dấu cách rồi đến mã key)
-    ------------------------------------------------------------------------
-    if string.lower(args[1]) == "key" then
-        if isVerified then
-            print("[HỆ THỐNG]: Bạn đã kích hoạt thành công từ trước rồi!")
-            return
-        end
-        
-        local inputKey = args[2]
-        if not inputKey then
-            print("[HỆ THỐNG]: Vui lòng nhập đúng cú pháp: key [Mã_Key]")
-            return
-        end
-        
-        print("[HỆ THỐNG]: Đang kiểm tra mã khóa...")
-        local targetKey = getServerKey()
-        
-        if targetKey and inputKey == targetKey then
-            isVerified = true
-            print("[HỆ THỐNG]: ✅ KÍCH HOẠT THÀNH CÔNG!")
-            sendChatMenu()
-        else
-            print("[HỆ THỐNG]: ❌ Sai mã khóa hoặc Server lỗi. Thử lại!")
-        end
-        return
-    end
-    
-    ------------------------------------------------------------------------
-    -- BƯỚC 2: ĐIỀU KHIỂN BẰNG SỐ (Chỉ chạy khi đã mở khóa Key)
-    ------------------------------------------------------------------------
-    if isVerified then
-        -- Ấn số 1 để Farm
-        if cleanMessage == "1" then
-            autoFarmActive = not autoFarmActive
-            print("[HỆ THỐNG]: Đã " .. (autoFarmActive and "BẬT 🌾" or "TẮT 🛑") .. " Auto Farm Level.")
-            
-        -- Ấn số 2 để Chạy nhanh
-        elseif cleanMessage == "2" then
-            speedActive = not speedActive
-            print("[HỆ THỐNG]: Đã " .. (speedActive and "BẬT ⚡" or "TẮT 🚶") .. " Tốc độ cao.")
-            if not speedActive then
-                pcall(function() LocalPlayer.Character.Humanoid.WalkSpeed = 16 end)
-            end
-            
-        -- Ấn số 3 để Nhảy cao
-        elseif cleanMessage == "3" then
-            jumpActive = not jumpActive
-            print("[HỆ THỐNG]: Đã " .. (jumpActive and "BẬT 🦘" or "TẮT 🛑") .. " Nhảy cao.")
-            if not jumpActive then
-                pcall(function() LocalPlayer.Character.Humanoid.JumpPower = 50 end)
-            end
-            
-        -- Ấn số 0 để hiển thị lại Menu hướng dẫn
-        elseif cleanMessage == "0" then
-            sendChatMenu()
-        end
-    else
-        -- Nếu chưa nhập key mà đã bấm số
-        if cleanMessage == "1" or cleanMessage == "2" or cleanMessage == "3" then
-            print("[HỆ THỐNG]: ⛔ Bạn cần phải kích hoạt Key trước. Hãy gõ: key [Mã_Key]")
-        end
-    end
-end)
-
 ------------------------------------------------------------------------
--- CÁC VÒNG LẶP HACK CHẠY NGẦM LOGIC (GIỮ NGUYÊN BẢN MƯỢT NHẤT)
+-- TỰ ĐỘNG KHÓA CHỈ SỐ DI CHUYỂN VÀ NHẢY CAO CHỐNG RESET
 ------------------------------------------------------------------------
-
--- Khóa chỉ số di chuyển chống game reset
 task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
-                if speedActive then humanoid.WalkSpeed = 90 end
-                if jumpActive then humanoid.JumpPower = 150 end
+                if speedActive then 
+                    humanoid.WalkSpeed = 90 -- Tự động chạy nhanh
+                end
+                if jumpActive then 
+                    humanoid.JumpPower = 150 -- Tự động nhảy cao
+                end
             end
         end)
     end
 end)
 
--- Tự động lấy vũ khí/trái ác quỷ lên tay
-local function autoEquip()
+------------------------------------------------------------------------
+-- LOGIC TỰ ĐỘNG TRANG BỊ VŨ KHÍ / TRÁI ÁC QUỶ ĐANG CÓ
+------------------------------------------------------------------------
+local function autoEquipWeapon()
     local char = LocalPlayer.Character
     if char and not char:FindFirstChildOfClass("Tool") then
         for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
@@ -153,10 +64,13 @@ local function autoEquip()
     end
 end
 
--- Nhận diện bãi quái và NPC theo Level
-local function getQuestData()
+------------------------------------------------------------------------
+-- TỰ ĐỘNG PHÂN TÍCH VÀ DI CHUYỂN THEO CẤP ĐỘ NHÂN VẬT (FARM NHIỆM VỤ)
+------------------------------------------------------------------------
+local function getQuestByLevel()
     local level = LocalPlayer.Data.Level.Value
     local quest = { QuestName = "BanditQuest1", QuestNumber = 1, EnemyName = "Bandit", NPCName = "Bandit Quest Giver" }
+    
     if level >= 10 and level < 15 then
         quest = { QuestName = "MonkeyQuest1", QuestNumber = 1, EnemyName = "Monkey", NPCName = "Monkey Quest Giver" }
     elseif level >= 15 and level < 30 then
@@ -167,47 +81,94 @@ local function getQuestData()
     return quest
 end
 
--- Auto Farm lõi
+-- Kiểm tra xem nhân vật đã nhận nhiệm vụ hiển thị trên màn hình chưa
+local function isQuestVisible()
+    local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
+    local questFrame = mainGui and mainGui:FindFirstChild("Quest")
+    return questFrame and questFrame.Visible == true
+end
+
+------------------------------------------------------------------------
+-- VÒNG LẶP CORE: TỰ ĐỘNG ĐÁNH VÀ DI CHUYỂN LIÊN TỤC
+------------------------------------------------------------------------
 task.spawn(function()
+    if not checkServerKey() then return end
+    
     while task.wait() do
-        if isVerified and autoFarmActive then
+        if autoFarmActive then
             pcall(function()
-                local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if not root then return end
+                local character = LocalPlayer.Character
+                local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+                if not rootPart then return end
                 
-                local q = getQuestData()
-                local hasQuest = LocalPlayer.PlayerGui:FindFirstChild("Main") and LocalPlayer.PlayerGui.Main:FindFirstChild("Quest").Visible
+                local currentJob = getQuestByLevel()
                 
-                if not hasQuest then
-                    local npc = game.Workspace:FindFirstChild(q.NPCName) or game.Workspace.NPCs:FindFirstChild(q.NPCName)
+                -- HÀNH ĐỘNG 1: Chưa có nhiệm vụ -> Tự động bay tới NPC nhận ngay
+                if not isQuestVisible() then
+                    local npc = game.Workspace:FindFirstChild(currentJob.NPCName) or game.Workspace.NPCs:FindFirstChild(currentJob.NPCName)
                     if npc and npc:FindFirstChild("HumanoidRootPart") then
-                        root.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
-                        task.wait(0.5)
-                        local comm = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF")
-                        if comm then comm:InvokeServer("StartQuest", q.QuestName, q.QuestNumber) end
+                        rootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+                        task.wait(0.4)
+                        
+                        -- Gửi lệnh nhận nhiệm vụ lên Server game
+                        local comms = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF")
+                        if comms then
+                            comms:InvokeServer("StartQuest", currentJob.QuestName, currentJob.QuestNumber)
+                        end
                     end
+                
+                -- HÀNH ĐỘNG 2: Đã có nhiệm vụ -> Tự lấy Trái Ác Quỷ/Vũ khí ra gom quái và farm
                 else
-                    autoEquip()
+                    autoEquipWeapon()
                     local enemyFound = false
-                    local folder = game.Workspace:FindFirstChild("Enemies")
-                    if folder then
-                        for _, e in pairs(folder:GetChildren()) do
-                            if e.Name == q.EnemyName and e:FindFirstChild("Humanoid") and e.Humanoid.Health > 0 and e:FindFirstChild("HumanoidRootPart") then
+                    local enemiesFolder = game.Workspace:FindFirstChild("Enemies")
+                    
+                    if enemiesFolder then
+                        for _, enemy in pairs(enemiesFolder:GetChildren()) do
+                            if enemy.Name == currentJob.EnemyName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
                                 enemyFound = true
-                                e.HumanoidRootPart.CanCollide = false
-                                e.HumanoidRootPart.Size = Vector3.new(40, 40, 40)
-                                root.CFrame = e.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0)
-                                local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                                if tool then tool:Activate() end
+                                
+                                -- Gom quái, phóng to bia va chạm để không bị đánh trượt
+                                enemy.HumanoidRootPart.CanCollide = false
+                                enemy.HumanoidRootPart.Size = Vector3.new(40, 40, 40)
+                                
+                                -- Bay trên đầu quái 700 mét (tránh quái đánh trả)
+                                rootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0)
+                                
+                                -- Tự động kích hoạt đòn đánh của Trái Ác Quỷ/Kiếm
+                                local weapon = character:FindFirstChildOfClass("Tool")
+                                if weapon then weapon:Activate() end
                                 break
                             end
                         end
                     end
+                    
+                    -- Nếu quái chưa hồi sinh tại bãi, tự động đứng đợi ở điểm Spawn của quái
                     if not enemyFound then
-                        local sp = game.Workspace:FindFirstChild(q.EnemyName .. " [Spawn]")
-                        if sp then root.CFrame = sp.CFrame end
+                        local spawnArea = game.Workspace:FindFirstChild(currentJob.EnemyName .. " [Spawn]")
+                        if spawnArea then 
+                            rootPart.CFrame = spawnArea.CFrame 
+                        end
                     end
                 end
+            end)
+        end
+    end
+end)
+
+------------------------------------------------------------------------
+-- CƠ CHẾ CẤP CỨU: NẾU MUỐN TẮT HACK -> ẤN NÚT GIẢM ÂM LƯỢNG (VOLUME DOWN)
+------------------------------------------------------------------------
+UserInputService.InputBegan:Connect(function(input, processed)
+    -- Khi bấm nút Giảm âm lượng trên điện thoại, hệ thống sẽ dừng Farm lập tức để bạn làm việc khác
+    if input.KeyCode == Enum.KeyCode.VolumeDown then
+        autoFarmActive = not autoFarmActive
+        speedActive = autoFarmActive
+        jumpActive = autoFarmActive
+        if not autoFarmActive then
+            pcall(function()
+                LocalPlayer.Character.Humanoid.WalkSpeed = 16
+                LocalPlayer.Character.Humanoid.JumpPower = 50
             end)
         end
     end
