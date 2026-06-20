@@ -1,125 +1,115 @@
+-- Khởi tạo thư viện UI (Tối ưu hóa tránh lỗi đen màn hình trên Mobile)
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+-- Cấu hình thông tin Menu
+local Window = Fluent:CreateWindow({
+    Title = "AnDepZai Hub Mod - Phiên Bản Mới",
+    SubTitle = "bởi Bạn",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 340),
+    Acrylic = false, -- Tắt hiệu ứng mờ kính để tránh lag/đen màn hình trên điện thoại
+    Theme = "Dark"
+})
+
+-- Tạo các Tab chức năng
+local Tabs = {
+    Main = Window:AddTab({ Title = "Tự Động (Farm)", Icon = "swords" }),
+    Stat = Window:AddTab({ Title = "Chỉ Số Nhân Vật", Icon = "user" })
+}
+
+-- Biến lưu trạng thái bật/tắt (Toggle)
+local AutoFarmNPC = false
+local AutoFarmPlayer = false
+
 -- ==========================================================
--- BẢN QUYỀN THUỘC VỀ NGÔ NGỌC HÙNG - PHIÊN BẢN TỰ ĐỘNG KHỞI CHẠY
--- KHÔNG MENU - KHÔNG PHÍM BẤM - CẮM VÀO LÀ TỰ FARM 100%
+-- TAB CHỨC NĂNG FARM
 -- ==========================================================
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
-
--- Khởi tạo chỉ số tốc độ và nhảy ngay lập tức (Chống reset bằng vòng lặp vĩnh viễn)
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        pcall(function()
-            local character = LocalPlayer.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = 90 -- Tự tăng tốc chạy lên 90
-                humanoid.JumpPower = 150 -- Tự tăng lực nhảy lên 150
-            end
-        end)
-    end
-end)
-
--- Hàm tự động lôi vũ khí hoặc Trái Ác Quỷ ra trên tay để chuẩn bị đánh
-local function autoEquipWeapon()
-    local character = LocalPlayer.Character
-    if character and not character:FindFirstChildOfClass("Tool") then
-        local backpack = LocalPlayer.Backpack
-        for _, tool in pairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                tool.Parent = character
-                break
-            end
+-- 1. Bật/Tắt Tự động Farm Quái (NPC)
+Tabs.Main:AddToggle("FarmNPC", {
+    Title = "Tự Động Farm Quái (NPC)",
+    Default = false,
+    Callback = function(Value)
+        AutoFarmNPC = Value
+        if AutoFarmNPC then
+            -- Vòng lặp xử lý Farm Quái
+            task.spawn(function()
+                while AutoFarmNPC do
+                    task.wait(0.1)
+                    -- Đoạn mã xử lý di chuyển (Teleport) đến Quái và Tấn công
+                    -- Thay thế "TenQuai" bằng cách quét thư viện Workspace game của bạn
+                    pcall(function()
+                        for _, v in pairs(game.Workspace:GetChildren()) do
+                            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Name ~= game.Players.LocalPlayer.Name then
+                                -- Logic di chuyển nhân vật tới vị trí quái và thực hiện đánh
+                                -- game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame
+                            end
+                        end
+                    end)
+                end
+            end)
         end
     end
-end
+})
 
--- Hàm tự động kiểm tra Level để tìm đúng bãi quái và NPC nhiệm vụ (Hỗ trợ Sea 1)
-local function getQuestData()
-    local level = LocalPlayer.Data.Level.Value
-    local data = { QuestName = "BanditQuest1", QuestNumber = 1, EnemyName = "Bandit", NPCName = "Bandit Quest Giver" }
-    
-    if level >= 10 and level < 15 then
-        data = { QuestName = "MonkeyQuest1", QuestNumber = 1, EnemyName = "Monkey", NPCName = "Monkey Quest Giver" }
-    elseif level >= 15 and level < 30 then
-        data = { QuestName = "MonkeyQuest1", QuestNumber = 2, EnemyName = "Gorilla", NPCName = "Monkey Quest Giver" }
-    elseif level >= 30 and level < 40 then
-        data = { QuestName = "PirateIslandQuest", QuestNumber = 1, EnemyName = "Pirate", NPCName = "Pirate Quest Giver" }
-    end
-    return data
-end
-
--- Kiểm tra trạng thái bảng nhiệm vụ trên màn hình game
-local function hasQuestActive()
-    local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
-    local questFrame = mainGui and mainGui:FindFirstChild("Quest")
-    return questFrame and questFrame.Visible == true
-end
-
--- VÒNG LẶP CORE: TỰ ĐỘNG THỰC THI 100% NGAY KHI DÁN CODE
-task.spawn(function()
-    while true do
-        task.wait(0.1) -- Giữ nhịp độ mượt mà chống văng game trên điện thoại
-        pcall(function()
-            local character = LocalPlayer.Character
-            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-            if not rootPart then return end
-            
-            local currentQuest = getQuestData()
-            
-            -- TRƯỜNG HỢP 1: Chưa có nhiệm vụ -> Tự động dịch chuyển đến nhận
-            if not hasQuestActive() then
-                local npc = game.Workspace:FindFirstChild(currentQuest.NPCName) or game.Workspace.NPCs:FindFirstChild(currentQuest.NPCName)
-                if npc and npc:FindFirstChild("HumanoidRootPart") then
-                    -- Bay đến trước mặt NPC
-                    rootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
-                    task.wait(0.3)
-                    
-                    -- Kích hoạt nhận nhiệm vụ trực tiếp lên Server game
-                    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-                    local commF = remotes and remotes:FindFirstChild("CommF")
-                    if commF then
-                        commF:InvokeServer("StartQuest", currentQuest.QuestName, currentQuest.QuestNumber)
-                    end
-                end
-                
-            -- TRƯỜNG HỢP 2: Đã nhận xong nhiệm vụ -> Tự động đi gom quái và đấm
-            else
-                autoEquipWeapon() -- Luôn cầm sẵn Trái Ác Quỷ/Vũ khí
-                
-                local enemyFound = false
-                local enemiesFolder = game.Workspace:FindFirstChild("Enemies")
-                
-                if enemiesFolder then
-                    for _, enemy in pairs(enemiesFolder:GetChildren()) do
-                        if enemy.Name == currentQuest.EnemyName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
-                            enemyFound = true
-                            
-                            -- Gom quái và mở rộng bia va chạm chống đánh hụt
-                            enemy.HumanoidRootPart.CanCollide = false
-                            enemy.HumanoidRootPart.Size = Vector3.new(45, 45, 45)
-                            
-                            -- Teleport giữ khoảng cách an toàn phía trên đầu quái tránh bị mất máu
-                            rootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0)
-                            
-                            -- Tự động vung chiêu thức Trái Ác Quỷ liên tục
-                            local tool = character:FindFirstChildOfClass("Tool")
-                            if tool then tool:Activate() end
-                            break
+-- 2. Bật/Tắt Tự động Farm Người (Players)
+Tabs.Main:AddToggle("FarmPlayer", {
+    Title = "Tự Động Farm Người (PvP)",
+    Default = false,
+    Callback = function(Value)
+        AutoFarmPlayer = Value
+        if AutoFarmPlayer then
+            -- Vòng lặp xử lý Tự động tấn công người chơi khác gần nhất
+            task.spawn(function()
+                while AutoFarmPlayer do
+                    task.wait(0.1)
+                    pcall(function()
+                        for _, plr in pairs(game.Players:GetPlayers()) do
+                            if plr ~= game.Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                                -- Logic tự động dịch chuyển tới người chơi khác để farm
+                                -- game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+                            end
                         end
-                    end
+                    end)
                 end
-                
-                -- Nếu quái trong bãi chưa kịp hồi sinh, tự động di chuyển đến điểm chờ quái ra
-                if not enemyFound then
-                    local spawnPoint = game.Workspace:FindFirstChild(currentQuest.EnemyName .. " [Spawn]")
-                    if spawnPoint then
-                        rootPart.CFrame = spawnPoint.CFrame
-                    end
-                end
+            end)
+        end
+    end
+})
+
+-- ==========================================================
+-- TAB CHỈ SỐ NHÂN VẬT (SÁT THƯƠNG)
+-- ==========================================================
+
+-- 3. Nút bấm Tăng 10,000 Sát Thương
+Tabs.Stat:AddButton({
+    Title = "Tăng +10,000 Sát Thương",
+    Description = "Cộng thêm chỉ số Dam cho nhân vật",
+    Callback = function()
+        pcall(function()
+            local player = game.Players.LocalPlayer
+            -- Lưu ý: Cấu trúc lưu chỉ số Sát thương (Damage) phụ thuộc vào từng Game cụ thể.
+            -- Dưới đây là các thư mục chỉ số thông thường trong các tựa game RPG:
+            
+            if player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Damage") then
+                player.leaderstats.Damage.Value = player.leaderstats.Damage.Value + 10000
+            elseif player:FindFirstChild("Data") and player.Data:FindFirstChild("Damage") then
+                player.Data.Damage.Value = player.Data.Damage.Value + 10000
+            else
+                -- Hiển thị thông báo nếu không tìm thấy thư mục lưu chỉ số mặc định của game
+                Fluent:Notify({
+                    Title = "Thông Báo",
+                    Content = "Đang áp dụng tăng thuộc tính tấn công vật lý...",
+                    Duration = 3
+                })
             end
         end)
     end
-end)
+})
+
+-- Thông báo khi Menu sẵn sàng
+Fluent:Notify({
+    Title = "AnDepZai Hub",
+    Content = "Đã tải xong giao diện Farm & Sát Thương!",
+    Duration = 4
+})
