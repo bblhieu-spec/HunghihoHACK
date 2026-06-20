@@ -1,115 +1,142 @@
--- Khởi tạo thư viện UI (Tối ưu hóa tránh lỗi đen màn hình trên Mobile)
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+-- Đổi tên menu thành HungHiHo Menu và tối ưu hóa giảm lag bằng Kavo UI Mobile
+local Kavo = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Kavo:CreateLib("HungHiHo Menu", "DarkTheme")
 
--- Cấu hình thông tin Menu
-local Window = Fluent:CreateWindow({
-    Title = "AnDepZai Hub Mod - Phiên Bản Mới",
-    SubTitle = "bởi Bạn",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 340),
-    Acrylic = false, -- Tắt hiệu ứng mờ kính để tránh lag/đen màn hình trên điện thoại
-    Theme = "Dark"
-})
+-- Khởi tạo các Tab chức năng chính
+local Tab1 = Window:NewTab("Tự Động Farm")
+local Tab2 = Window:NewTab("Chỉ Số (Dam)")
 
--- Tạo các Tab chức năng
-local Tabs = {
-    Main = Window:AddTab({ Title = "Tự Động (Farm)", Icon = "swords" }),
-    Stat = Window:AddTab({ Title = "Chỉ Số Nhân Vật", Icon = "user" })
-}
+local Section1 = Tab1:NewSection("Chức Năng Farm")
+local Section2 = Tab2:NewSection("Tăng Sát Thương")
 
--- Biến lưu trạng thái bật/tắt (Toggle)
+-- Biến lưu trạng thái hoạt động của chức năng
 local AutoFarmNPC = false
 local AutoFarmPlayer = false
+local VirtualUser = game:GetService("VirtualUser")
+
+-- Giả lập tự động bấm chuột để nhân vật tự vung kiếm/đánh khi farm
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button1Down(Vector2.new(0,0), game.Workspace.CurrentCamera.CFrame)
+    task.wait(1)
+end)
 
 -- ==========================================================
--- TAB CHỨC NĂNG FARM
+-- CHỨC NĂNG 1: TỰ ĐỘNG FARM QUÁI (NPC) HOẠT ĐỘNG THẬT
 -- ==========================================================
-
--- 1. Bật/Tắt Tự động Farm Quái (NPC)
-Tabs.Main:AddToggle("FarmNPC", {
-    Title = "Tự Động Farm Quái (NPC)",
-    Default = false,
-    Callback = function(Value)
-        AutoFarmNPC = Value
-        if AutoFarmNPC then
-            -- Vòng lặp xử lý Farm Quái
-            task.spawn(function()
-                while AutoFarmNPC do
-                    task.wait(0.1)
-                    -- Đoạn mã xử lý di chuyển (Teleport) đến Quái và Tấn công
-                    -- Thay thế "TenQuai" bằng cách quét thư viện Workspace game của bạn
-                    pcall(function()
+Section1:NewToggle("Tự Động Farm Quái", "Tự tìm quái trên bản đồ và tiêu diệt", function(state)
+    AutoFarmNPC = state
+    if AutoFarmNPC then
+        task.spawn(function()
+            while AutoFarmNPC do
+                task.wait(0.1)
+                pcall(function()
+                    local player = game.Players.LocalPlayer
+                    local character = player.Character
+                    if character and character:FindFirstChild("HumanoidRootPart") then
+                        -- Quét toàn bộ bản đồ để tìm NPC/Quái có máu (Humanoid)
                         for _, v in pairs(game.Workspace:GetChildren()) do
-                            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Name ~= game.Players.LocalPlayer.Name then
-                                -- Logic di chuyển nhân vật tới vị trí quái và thực hiện đánh
-                                -- game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame
+                            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") then
+                                -- Kiểm tra xem đó có phải là Quái không (không phải bản thân và không phải người chơi khác)
+                                if v.Name ~= player.Name and not game.Players:GetPlayerFromCharacter(v) and v.Humanoid.Health > 0 then
+                                    -- Lặp lại việc dịch chuyển đến sát vị trí của quái cho đến khi nó chết
+                                    repeat
+                                        if not AutoFarmNPC then break end
+                                        character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                                        -- Kích hoạt giả lập click chuột tấn công liên tục
+                                        VirtualUser:CaptureController()
+                                        VirtualUser:ClickButton1(Vector2.new(850, 520))
+                                        task.wait(0.05)
+                                    until v.Humanoid.Health <= 0 or not AutoFarmNPC
+                                end
                             end
                         end
-                    end)
-                end
-            end)
-        end
-    end
-})
-
--- 2. Bật/Tắt Tự động Farm Người (Players)
-Tabs.Main:AddToggle("FarmPlayer", {
-    Title = "Tự Động Farm Người (PvP)",
-    Default = false,
-    Callback = function(Value)
-        AutoFarmPlayer = Value
-        if AutoFarmPlayer then
-            -- Vòng lặp xử lý Tự động tấn công người chơi khác gần nhất
-            task.spawn(function()
-                while AutoFarmPlayer do
-                    task.wait(0.1)
-                    pcall(function()
-                        for _, plr in pairs(game.Players:GetPlayers()) do
-                            if plr ~= game.Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                                -- Logic tự động dịch chuyển tới người chơi khác để farm
-                                -- game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
-                            end
-                        end
-                    end)
-                end
-            end)
-        end
-    end
-})
-
--- ==========================================================
--- TAB CHỈ SỐ NHÂN VẬT (SÁT THƯƠNG)
--- ==========================================================
-
--- 3. Nút bấm Tăng 10,000 Sát Thương
-Tabs.Stat:AddButton({
-    Title = "Tăng +10,000 Sát Thương",
-    Description = "Cộng thêm chỉ số Dam cho nhân vật",
-    Callback = function()
-        pcall(function()
-            local player = game.Players.LocalPlayer
-            -- Lưu ý: Cấu trúc lưu chỉ số Sát thương (Damage) phụ thuộc vào từng Game cụ thể.
-            -- Dưới đây là các thư mục chỉ số thông thường trong các tựa game RPG:
-            
-            if player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Damage") then
-                player.leaderstats.Damage.Value = player.leaderstats.Damage.Value + 10000
-            elseif player:FindFirstChild("Data") and player.Data:FindFirstChild("Damage") then
-                player.Data.Damage.Value = player.Data.Damage.Value + 10000
-            else
-                -- Hiển thị thông báo nếu không tìm thấy thư mục lưu chỉ số mặc định của game
-                Fluent:Notify({
-                    Title = "Thông Báo",
-                    Content = "Đang áp dụng tăng thuộc tính tấn công vật lý...",
-                    Duration = 3
-                })
+                    end
+                end)
             end
         end)
     end
-})
+end)
 
--- Thông báo khi Menu sẵn sàng
-Fluent:Notify({
-    Title = "AnDepZai Hub",
-    Content = "Đã tải xong giao diện Farm & Sát Thương!",
-    Duration = 4
-})
+-- ==========================================================
+-- CHỨC NĂNG 2: TỰ ĐỘNG FARM NGƯỜI (PLAYER PVP)
+-- ==========================================================
+Section1:NewToggle("Tự Động Farm Người", "Tự dịch chuyển và săn người chơi khác", function(state)
+    AutoFarmPlayer = state
+    if AutoFarmPlayer then
+        task.spawn(function()
+            while AutoFarmPlayer do
+                task.wait(0.1)
+                pcall(function()
+                    local player = game.Players.LocalPlayer
+                    local character = player.Character
+                    if character and character:FindFirstChild("HumanoidRootPart") then
+                        for _, plrs in pairs(game.Players:GetPlayers()) do
+                            if plrs ~= player and plrs.Character and plrs.Character:FindFirstChild("HumanoidRootPart") and plrs.Character:FindFirstChild("Humanoid") then
+                                if plrs.Character.Humanoid.Health > 0 then
+                                    repeat
+                                        if not AutoFarmPlayer then break end
+                                        character.HumanoidRootPart.CFrame = plrs.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                                        VirtualUser:CaptureController()
+                                        VirtualUser:ClickButton1(Vector2.new(850, 520))
+                                        task.wait(0.05)
+                                    until plrs.Character.Humanoid.Health <= 0 or not AutoFarmPlayer
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+end)
+
+-- ==========================================================
+-- CHỨC NĂNG 3: TĂNG 10,000 SÁT THƯƠNG
+-- ==========================================================
+Section2:NewButton("Bật Tăng +10000 Sát Thương", "Cộng dồn chỉ số tấn công vật lý", function()
+    pcall(function()
+        local player = game.Players.LocalPlayer
+        -- Tìm kiếm các thư mục lưu dữ liệu chỉ số phổ biến của game để cộng điểm
+        local stats = player:FindFirstChild("leaderstats") or player:FindFirstChild("Data") or player:FindFirstChild("Stats")
+        if stats then
+            for _, stat in pairs(stats:GetChildren()) do
+                if stat.Name:lower():match("damage") or stat.Name:lower():match("dam") or stat.Name:lower():match("sat_thuong") then
+                    stat.Value = stat.Value + 10000
+                end
+            end
+        end
+    end)
+end)
+
+-- ==========================================================
+-- TẠO NÚT BẤM NHỎ NỔI TRÊN MÀN HÌNH ĐỂ ĐÓNG/MỞ MENU KHÔNG LO LAG
+-- ==========================================================
+local OpenCloseGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+OpenCloseGui.Name = "HungHiHoToggleGui"
+OpenCloseGui.Parent = game.CoreGui
+OpenCloseGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = OpenCloseGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Position = UDim2.new(0.05, 0, 0.15, 0) -- Vị trí nút nhỏ ở góc trên bên trái màn hình
+ToggleButton.Size = UDim2.new(0, 60, 0, 60)        -- Kích thước nút tròn nhỏ vừa vặn ngón tay
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "H H H"                         -- Viết tắt của HungHiHo Menu
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 16.000
+
+UICorner.CornerRadius = UDim.new(0, 30)             -- Bo tròn nút thành hình tròn 100%
+UICorner.Parent = ToggleButton
+
+-- Logic bấm nút để ẩn/hiện bảng menu cực mượt
+local menuVisible = true
+ToggleButton.MouseButton1Click:Connect(function()
+    menuVisible = not menuVisible
+    -- Kavo UI tự động ẩn/hiện toàn bộ khung chính khi gọi lệnh này
+    game.CoreGui:FindFirstChild("Library").Enabled = menuVisible
+end)
