@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HUNG TOOL VIP - Siêu Cấp Admin Key Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #020617, #0f172a);
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --neon-pink: #ff00ff;
+            --neon-blue: #00ffff;
+            --green: #10b981;
+            --red: #ef4444;
+            --orange: #f97316;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        body {
+            background: var(--bg-gradient); color: var(--text-main);
+            min-height: 100vh; padding: 30px 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .admin-card {
+            width: 100%; max-width: 650px;
+            background: var(--panel-bg); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 20px; position: relative;
+        }
+        h1 {
+            text-align: center; font-size: 22px; font-weight: 800; margin-bottom: 5px;
+            background: linear-gradient(to right, var(--neon-pink), var(--neon-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        p.subtitle { text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+        label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); letter-spacing: 0.5px; }
+        input, select {
+            width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border-color);
+            border-radius: 8px; color: #fff; font-size: 14px; margin-bottom: 15px; outline: none;
+        }
+        input:focus, select:focus { border-color: var(--neon-blue); }
+        
+        .row-three {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;
+        }
+        
+        .flex-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
+        
+        button {
+            width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+            cursor: pointer; color: #fff; background: linear-gradient(90deg, var(--neon-pink), var(--neon-blue));
+            transition: 0.2s; margin-bottom: 10px;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-random { background: linear-gradient(90deg, var(--orange), #ea580c); margin-bottom: 0; }
+        .btn-add { background: linear-gradient(90deg, #10b981, #06b6d4); margin-bottom: 0; }
+        .btn-clear-all { background: linear-gradient(90deg, #dc2626, #b91c1c); margin-top: 10px; }
+        
+        .key-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #0f172a; padding: 12px; border-radius: 8px;
+            margin-bottom: 8px; border: 1px solid var(--border-color);
+        }
+        .key-text { font-weight: 700; font-size: 14px; color: #fff; word-break: break-all; padding-right: 10px;}
+        .btn-delete {
+            background: var(--red); color: white; padding: 6px 12px; border-radius: 6px;
+            font-size: 12px; font-weight: 600; border: none; width: auto; margin-bottom: 0;
+        }
+        .status-msg { font-size: 13px; text-align: center; font-weight: 600; margin-top: 5px; min-height: 20px;}
+        .status-success { color: var(--green); }
+        .status-error { color: var(--red); }
+        textarea {
+            width: 100%; height: 100px; background: #0f172a; border: 1px solid var(--border-color);
+            border-radius: 8px; color: #fff; font-size: 13px; padding: 10px; margin-bottom: 15px; resize: none; outline: none;
+        }
+        .custom-limit-box {
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PHẦN 1: ĐĂNG NHẬP BẢO MẬT ADMIN -->
+    <div class="admin-card" id="loginPanel">
+        <h1>HUNG SUPER ADMIN DASHBOARD</h1>
+        <p class="subtitle">X-Master-Key đã ẩn mật. Vui lòng xác minh mật khẩu Admin</p>
+        
+        <label>MẬT KHẨU TRUY CẬP ADMIN:</label>
+        <input type="password" id="adminPasswordInput" placeholder="Nhập mật khẩu quản trị của bạn...">
+        
+        <button onclick="loginAdmin()">🔓 ĐĂNG NHẬP HỆ THỐNG</button>
+        <div id="statusMsg" class="status-msg"></div>
+    </div>
+
+    <!-- PHẦN 2: THÊM KEY MỚI & THIẾT LẬP CẤU HÌNH NGƯỜI DÙNG -->
+    <div class="admin-card" id="managerPanel" style="display: none;">
+        <div class="row-three">
+            <div>
+                <label>THỜI HẠN SỬ DỤNG:</label>
+                <select id="timeLimitSelect">
+                    <option value="1H">1 Giờ (Test Tool)</option>
+                    <option value="2H">2 Giờ (VIP Ngắn hạn)</option>
+                    <option value="4H">4 Giờ</option>
+                    <option value="12H">12 Giờ</option>
+                    <option value="1D">1 Ngày</option>
+                    <option value="7D">7 Ngày</option>
+                    <option value="30D" selected>30 Ngày (1 Tháng)</option>
+                    <option value="365D">365 Ngày (1 Năm)</option>
+                </select>
+            </div>
+            <div>
+                <label>GIỚI HẠN SỐ MÁY:</label>
+                <!-- Giữ nguyên thanh lựa chọn như cũ -->
+                <select id="userLimitSelect" onchange="toggleCustomLimitInput()">
+                    <option value="1" selected>Khóa 1 máy</option>
+                    <option value="2">Cho phép 2 máy</option>
+                    <option value="5">Cho phép 5 máy</option>
+                    <option value="999">Vô hạn máy</option>
+                    <option value="custom">Nhập số máy khác...</option>
+                </select>
+            </div>
+            <div>
+                <label>SỐ LƯỢNG KEY TẠO:</label>
+                <input type="number" id="keyQuantityInput" value="1" min="1" max="50">
+            </div>
+        </div>
+
+        <!-- Ô nhập tay ẩn/hiện thông minh khi chọn mục "Nhập số máy khác..." -->
+        <div id="customLimitContainer" class="custom-limit-box" style="display: none;">
+            <label style="color: var(--neon-blue);">NHẬP SỐ MÁY GIỚI HẠN TÙY Ý:</label>
+            <input type="number" id="customUserLimitInput" value="10" min="1" max="998" placeholder="Ví dụ: 10, 20, 50...">
+        </div>
+
+        <label>DANH SÁCH MÃ KEY ĐƯỢC TẠO RA (CÁCH NHAU BẰNG DẤU XUỐNG DÒNG):</label>
+        <textarea id="newKeyInput" placeholder="Bấm nút Tạo ngẫu nhiên ở dưới..."></textarea>
+        
+        <div class="flex-buttons">
+            <button class="btn-random" onclick="generateSuperKeys()">🎲 TẠO HÀNG LOẠT KEY</button>
+            <button class="btn-add" onclick="addNewKeysToCloud()">➕ THÊM TẤT CẢ VÀO CLOUD</button>
+        </div>
+    </div>
+
+    <!-- PHẦN 3: DANH SÁCH KEY ĐANG HOẠT ĐỘNG -->
+    <div class="admin-card" id="listPanel" style="display: none;">
+        <label style="margin-bottom: 15px;" id="keyCountLabel">DANH SÁCH KEY ĐANG CÓ TRÊN CLOUD:</label>
+        <div id="keyListContainer"></div>
+        
+        <button class="btn-clear-all" onclick="clearAllKeysFromServer()">🚨 XÓA TẤT CẢ KEY (DỌN SẠCH CƠ SỞ DỮ LIỆU)</button>
+    </div>
+
+    <script>
+        const BIN_ID = "6a4065bbf5f4af5e293ae8d9"; 
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+        const MASTER_KEY = "$2a$10$w2vogPsNVk6QlFdnS0ZCwuHcD/tdk9fPnLZB0fCAcJMGFBklvUyrS"; 
+        const ADMIN_PASSWORD = "2608858324"; 
+
+        let currentKeys = [];
+
+        function showStatus(text, type) {
+            const el = document.getElementById('statusMsg');
+            el.innerText = text;
+            el.className = 'status-msg ' + (type === 'success' ? 'status-success' : 'status-error');
+        }
+
+        async function loginAdmin() {
+            const inputPass = document.getElementById('adminPasswordInput').value.trim();
+            if (inputPass !== ADMIN_PASSWORD) {
+                showStatus("Mật khẩu Admin không chính xác!", "error");
+                return;
+            }
+            await loadKeysFromServer();
+        }
+
+        // Hàm kiểm tra ẩn/hiện ô nhập tay số lượng máy
+        function toggleCustomLimitInput() {
+            const selectValue = document.getElementById('userLimitSelect').value;
+            const customBox = document.getElementById('customLimitContainer');
+            if (selectValue === 'custom') {
+                customBox.style.display = 'block';
+            } else {
+                customBox.style.display = 'none';
+            }
+        }
+
+        // Lấy số lượng máy thực tế từ Select hoặc Ô nhập tay
+        function getFinalUserLimit() {
+            const selectValue = document.getElementById('userLimitSelect').value;
+            if (selectValue === 'custom') {
+                return parseInt(document.getElementById('customUserLimitInput').value) || 1;
+            }
+            return parseInt(selectValue);
+        }
+
+        function generateSuperKeys() {
+            const qty = parseInt(document.getElementById('keyQuantityInput').value) || 1;
+            const duration = document.getElementById('timeLimitSelect').value;
+            const users = getFinalUserLimit();
+            let generatedList = [];
+
+            for (let i = 0; i < qty; i++) {
+                let digits = [];
+                while(digits.length < 6) {
+                    let randomDigit = Math.floor(Math.random() * 10).toString();
+                    if(!digits.includes(randomDigit)) { digits.push(randomDigit); }
+                }
+                let randomString = digits.join("");
+                generatedList.push(`HUNG_VIP_${randomString}_${duration}_${users}U`);
+            }
+            
+            document.getElementById('newKeyInput').value = generatedList.join("\n");
+        }
+
+        async function loadKeysFromServer() {
+            showStatus("Đang đồng bộ với đám mây JsonBin...", "success");
+            try {
+                const response = await fetch(`${API_URL}/latest`, {
+                    method: 'GET',
+                    headers: { 'X-Master-Key': MASTER_KEY, 'X-Bin-Meta': 'false' }
+                });
+                if (!response.ok) throw new Error("Lỗi kết nối cơ sở dữ liệu!");
+
+                const data = await response.json();
+                currentKeys = Array.isArray(data.keys) ? data.keys : [];
+                
+                renderKeyList();
+                document.getElementById('loginPanel').style.display = 'none';
+                document.getElementById('managerPanel').style.display = 'block';
+                document.getElementById('listPanel').style.display = 'block';
+            } catch (error) {
+                showStatus(error.message, "error");
+            }
+        }
+
+        function renderKeyList() {
+            const container = document.getElementById('keyListContainer');
+            container.innerHTML = '';
+            document.getElementById('keyCountLabel').innerText = `DANH SÁCH KEY TRÊN SERVER (Tổng cộng: ${currentKeys.length} mã):`;
+
+            if (currentKeys.length === 0) {
+                container.innerHTML = '<p style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px 0;">Hiện hệ thống trống, không có mã Key nào.</p>';
+                return;
+            }
+
+            currentKeys.forEach((item, index) => {
+                const keyStr = (typeof item === 'object') ? item.key : item;
+                const limit = (typeof item === 'object') ? item.limit : 1;
+                const usedArray = (typeof item === 'object' && item.used) ? item.used : [];
+                
+                let infoText = "Hạn: Chưa rõ";
+                if(keyStr.includes("_")) {
+                    let parts = keyStr.split("_");
+                    let d = parts[parts.length - 2] || "30D";
+                    if(d.endsWith("H")) infoText = `Hạn: ${d.replace("H"," giờ")}`;
+                    if(d.endsWith("D")) infoText = `Hạn: ${d.replace("D"," ngày")}`;
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'key-item';
+                itemDiv.innerHTML = `
+                    <div style="display: flex; flex-direction: column; width: 75%;">
+                        <span class="key-text">${keyStr}</span>
+                        <span style="font-size: 11px; color: var(--neon-blue); margin-top: 3px;">
+                            ${infoText} | Máy đã dùng: <b style="color: ${usedArray.length >= limit ? 'var(--red)' : 'var(--green)'}">${usedArray.length}/${limit === 999 ? '∞' : limit}</b>
+                        </span>
+                    </div>
+                    <button class="btn-delete" onclick="deleteKey(${index})">Xóa</button>
+                `;
+                container.appendChild(itemDiv);
+            });
+        }
+
+        async function addNewKeysToCloud() {
+            const lines = document.getElementById('newKeyInput').value.split("\n");
+            const limit = getFinalUserLimit();
+            let addedCount = 0;
+
+            lines.forEach(line => {
+                const cleanKey = line.trim();
+                if (!cleanKey) return;
+
+                const isExist = currentKeys.some(item => {
+                    const k = (typeof item === 'object') ? item.key : item;
+                    return k === cleanKey;
+                });
+
+                if (!isExist) {
+                    currentKeys.push({
+                        key: cleanKey,
+                        limit: limit,
+                        used: []
+                    });
+                    addedCount++;
+                }
+            });
+
+            if (addedCount === 0) { alert("Không có key hợp lệ hoặc tất cả mã đều trùng lặp!"); return; }
+            
+            if (await updateServer()) {
+                document.getElementById('newKeyInput').value = '';
+                renderKeyList();
+                alert(`Đã kích hoạt thành công ${addedCount} Key mới lên dữ liệu đám mây!`);
+            } else {
+                alert("Lỗi đẩy dữ liệu lên server!");
+            }
+        }
+
+        async function deleteKey(index) {
+            if(!confirm(`Bạn chắc chắn muốn XÓA và HỦY BỎ key này?`)) return;
+            currentKeys.splice(index, 1);
+            if (await updateServer()) renderKeyList();
+        }
+
+        async function clearAllKeysFromServer() {
+            if(!confirm("Xóa toàn bộ cơ sở dữ liệu trên mây?")) return;
+            currentKeys = []; 
+            if (await updateServer()) { renderKeyList(); alert("DỌN SẠCH THÀNH CÔNG!"); }
+        }
+
+        async function updateServer() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+                    body: JSON.stringify({ keys: currentKeys, status: "active" })
+                });
+                return response.ok;
+            } catch (error) {
+                return false;
+            }
+        }
+    </script>
+</body>
+</html>
